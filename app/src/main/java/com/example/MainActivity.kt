@@ -80,7 +80,14 @@ fun ForzaDashboardApp(viewModel: ForzaViewModel = viewModel()) {
     val currentLayout by viewModel.currentLayout.collectAsState()
 
     var portInput by remember { mutableStateOf("5300") }
+    var ipInput by remember { mutableStateOf("") }
     var showSettings by remember { mutableStateOf(false) }
+
+    LaunchedEffect(localIp) {
+        if (ipInput.isEmpty() && localIp.isNotEmpty()) {
+            ipInput = localIp
+        }
+    }
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -108,122 +115,120 @@ fun ForzaDashboardApp(viewModel: ForzaViewModel = viewModel()) {
                 )
         )
         
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .systemBarsPadding(),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Status Bar Simulation
-            Row(
+        if (!isListening) {
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 24.dp, vertical = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                    .fillMaxSize()
+                    .systemBarsPadding()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
                         text = "FORZALINK",
-                        fontSize = 12.sp,
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Medium,
                         color = theme.textSecondary,
                         letterSpacing = 2.sp
                     )
-                    if (isListening) {
+                    Box(modifier = Modifier.size(8.dp).clip(CircleShape).background(Color.Red))
+                }
+                Spacer(modifier = Modifier.height(48.dp))
+                
+                Box(
+                    modifier = Modifier
+                        .widthIn(max = 400.dp)
+                        .background(
+                            color = theme.surface,
+                            shape = RoundedCornerShape(32.dp)
+                        )
+                        .border(
+                            width = 1.dp,
+                            color = theme.textPrimary.copy(alpha = 0.05f),
+                            shape = RoundedCornerShape(32.dp)
+                        )
+                        .padding(32.dp)
+                ) {
+                    ConnectionPanel(
+                        localIp = ipInput,
+                        onIpInputChange = { ipInput = it },
+                        portInput = portInput,
+                        onPortInputChange = { portInput = it },
+                        isListening = isListening,
+                        onToggleListen = { viewModel.toggleListening(portInput) }
+                    )
+                }
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                IconButton(onClick = { showSettings = true }) {
+                    Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings", tint = theme.textSecondary)
+                }
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .systemBarsPadding(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                // Status Bar Simulation
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 24.dp)
+                        .padding(top = 16.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.align(Alignment.CenterStart)
+                    ) {
+                        Text(
+                            text = "FORZALINK",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Medium,
+                            color = theme.textSecondary,
+                            letterSpacing = 2.sp
+                        )
                         Box(
                             modifier = Modifier
                                 .size(6.dp)
                                 .clip(CircleShape)
                                 .background(theme.secondary)
                         )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .size(6.dp)
-                                .clip(CircleShape)
-                                .background(Color.Red)
-                        )
-                    }
-                }
-                
-                IconButton(onClick = { showSettings = true }) {
-                    Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings", tint = theme.textSecondary)
-                }
-            }
-
-            if (isLandscape) {
-                Row(
-                    modifier = Modifier.fillMaxWidth().weight(1f)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        DashboardCluster(telemetryState, isLandscape = true, isMph = isMph, layout = currentLayout)
                     }
                     
-                    Box(
-                        modifier = Modifier
-                            .width(360.dp)
-                            .fillMaxHeight()
-                            .background(
-                                color = theme.surface,
-                                shape = RoundedCornerShape(topStart = 32.dp, bottomStart = 32.dp)
-                            )
-                            .border(
-                                width = 1.dp,
-                                color = theme.textPrimary.copy(alpha = 0.05f),
-                                shape = RoundedCornerShape(topStart = 32.dp, bottomStart = 32.dp)
-                            )
-                            .padding(24.dp)
-                    ) {
-                        ConnectionPanel(
-                            localIp = localIp,
-                            portInput = portInput,
-                            onPortInputChange = { portInput = it },
-                            isListening = isListening,
-                            onToggleListen = { viewModel.toggleListening(portInput) },
-                            isLandscape = true
+                    if (isLandscape) {
+                        ShiftLights(
+                            data = telemetryState,
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .width(400.dp)
+                                .height(24.dp)
                         )
                     }
+                    
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    ) {
+                        IconButton(onClick = { viewModel.toggleListening(portInput) }) {
+                            Icon(imageVector = Icons.Default.Close, contentDescription = "Disconnect", tint = theme.textSecondary)
+                        }
+                        IconButton(onClick = { showSettings = true }) {
+                            Icon(imageVector = Icons.Default.Settings, contentDescription = "Settings", tint = theme.textSecondary)
+                        }
+                    }
                 }
-            } else {
-                // Dashboard View
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .weight(1f),
                     contentAlignment = Alignment.Center
                 ) {
-                    DashboardCluster(telemetryState, isLandscape = false, isMph = isMph, layout = currentLayout)
-                }
-
-                // Bottom Connection Sheet
-                Box(
-                    modifier = Modifier
-                        .background(
-                            color = theme.surface,
-                            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-                        )
-                        .border(
-                            width = 1.dp,
-                            color = theme.textPrimary.copy(alpha = 0.05f),
-                            shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-                        )
-                        .padding(24.dp)
-                        .padding(bottom = 16.dp)
-                ) {
-                    ConnectionPanel(
-                        localIp = localIp,
-                        portInput = portInput,
-                        onPortInputChange = { portInput = it },
-                        isListening = isListening,
-                        onToggleListen = { viewModel.toggleListening(portInput) },
-                        isLandscape = false
-                    )
+                    DashboardCluster(telemetryState, isLandscape = isLandscape, isMph = isMph, layout = currentLayout)
                 }
             }
         }
@@ -245,35 +250,23 @@ fun ForzaDashboardApp(viewModel: ForzaViewModel = viewModel()) {
 @Composable
 fun ConnectionPanel(
     localIp: String,
+    onIpInputChange: (String) -> Unit,
     portInput: String,
     onPortInputChange: (String) -> Unit,
     isListening: Boolean,
-    onToggleListen: () -> Unit,
-    isLandscape: Boolean
+    onToggleListen: () -> Unit
 ) {
     val theme = LocalDashboardTheme.current
 
-    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = if(isLandscape) Modifier.fillMaxHeight() else Modifier) {
-        if(!isLandscape) {
-            // Drag Handle
-            Box(
-                modifier = Modifier
-                    .width(48.dp)
-                    .height(4.dp)
-                    .background(theme.textPrimary.copy(alpha = 0.2f), CircleShape)
-            )
-            Spacer(modifier = Modifier.height(24.dp))
-        } else {
-            Spacer(modifier = Modifier.weight(1f))
-            Text(
-                "CONNECTION SETUP",
-                fontSize = 12.sp,
-                fontWeight = FontWeight.Bold,
-                color = theme.textSecondary,
-                letterSpacing = 2.sp,
-                modifier = Modifier.padding(bottom = 24.dp)
-            )
-        }
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Text(
+            "CONNECTION SETUP",
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            color = theme.textSecondary,
+            letterSpacing = 2.sp,
+            modifier = Modifier.padding(bottom = 24.dp)
+        )
 
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -297,11 +290,17 @@ fun ConnectionPanel(
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    Text(
-                        text = localIp,
-                        color = theme.textPrimary,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Medium
+                    BasicTextField(
+                        value = localIp,
+                        onValueChange = onIpInputChange,
+                        singleLine = true,
+                        enabled = !isListening,
+                        textStyle = LocalTextStyle.current.copy(
+                            color = theme.textPrimary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Medium
+                        ),
+                        modifier = Modifier.fillMaxWidth()
                     )
                 }
             }
@@ -375,52 +374,62 @@ fun ConnectionPanel(
             fontSize = 11.sp,
             fontStyle = FontStyle.Italic
         )
-
-        if(isLandscape) {
-            Spacer(modifier = Modifier.weight(1f))
-        }
     }
 }
 
 @Composable
 fun DashboardCluster(data: TelemetryData, isLandscape: Boolean, isMph: Boolean, layout: DashboardLayout) {
     if (isLandscape) {
-        Row(
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.Center,
-            modifier = Modifier.fillMaxWidth()
+        Box(
+            modifier = Modifier.fillMaxSize()
         ) {
-            when (layout) {
-                DashboardLayout.CLASSIC_ARC -> ClassicArcLayout(data, isMph)
-                DashboardLayout.F1_LINEAR -> F1LinearLayout(data, isMph)
-                DashboardLayout.DIGITAL_CLEAN -> DigitalCleanLayout(data, isMph)
-                DashboardLayout.NEON_RING -> NeonRingLayout(data, isMph)
-                DashboardLayout.SPORT_TACH -> SportTachLayout(data, isMph)
-                DashboardLayout.SUPERCAR_DASH -> SupercarDashLayout(data, isMph)
-                DashboardLayout.RALLY_HUD -> RallyHudLayout(data, isMph)
-            }
-            
-            Spacer(modifier = Modifier.width(48.dp))
-            
-            Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .align(Alignment.Center)
             ) {
-                TelemetryBadge(
-                    label = "RPM",
-                    value = "${data.currentEngineRpm.toInt()}",
-                    modifier = Modifier.width(110.dp)
-                )
-                TelemetryBadge(
-                    label = "IDLE",
-                    value = "${data.engineIdleRpm.toInt()}",
-                    modifier = Modifier.width(110.dp)
-                )
-                TelemetryBadge(
-                    label = "REDLINE",
-                    value = "${data.engineMaxRpm.toInt()}",
-                    modifier = Modifier.width(110.dp)
-                )
+                // Left: Steering/Pedal Inputs
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    PedalBars(data = data)
+                }
+
+                // Center: Main Layout Gauge
+                when (layout) {
+                    DashboardLayout.CLASSIC_ARC -> ClassicArcLayout(data, isMph)
+                    DashboardLayout.F1_LINEAR -> F1LinearLayout(data, isMph)
+                    DashboardLayout.DIGITAL_CLEAN -> DigitalCleanLayout(data, isMph)
+                    DashboardLayout.NEON_RING -> NeonRingLayout(data, isMph)
+                    DashboardLayout.SPORT_TACH -> SportTachLayout(data, isMph)
+                    DashboardLayout.SUPERCAR_DASH -> SupercarDashLayout(data, isMph)
+                    DashboardLayout.RALLY_HUD -> RallyHudLayout(data, isMph)
+                }
+                
+                // Right: RPM Badges
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally
+                ) {
+                    TelemetryBadge(
+                        label = "RPM",
+                        value = "${data.currentEngineRpm.toInt()}",
+                        modifier = Modifier.width(110.dp)
+                    )
+                    TelemetryBadge(
+                        label = "IDLE",
+                        value = "${data.engineIdleRpm.toInt()}",
+                        modifier = Modifier.width(110.dp)
+                    )
+                    TelemetryBadge(
+                        label = "REDLINE",
+                        value = "${data.engineMaxRpm.toInt()}",
+                        modifier = Modifier.width(110.dp)
+                    )
+                }
             }
         }
     } else {
@@ -1037,6 +1046,111 @@ fun TelemetryBadge(label: String, value: String, modifier: Modifier = Modifier) 
 }
 
 @Composable
+fun ShiftLights(data: TelemetryData, modifier: Modifier = Modifier) {
+    val theme = LocalDashboardTheme.current
+    val max = if (data.engineMaxRpm > 100) data.engineMaxRpm else 8000f
+    val progress = (data.currentEngineRpm / max).coerceIn(0f, 1f)
+    
+    Row(
+        modifier = modifier
+            .background(theme.textPrimary.copy(alpha = 0.05f), RoundedCornerShape(12.dp))
+            .padding(horizontal = 8.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        val numLights = 15
+        for (i in 0 until numLights) {
+            val threshold = (i + 1) / numLights.toFloat()
+            val color = when {
+                progress >= threshold && i >= 12 -> Color(0xFFEF4444) // Red
+                progress >= threshold && i >= 8 -> theme.primary      // Primary (Blue/Orange)
+                progress >= threshold -> theme.secondary              // Secondary
+                else -> theme.textPrimary.copy(alpha = 0.1f)
+            }
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .fillMaxHeight()
+                    .padding(horizontal = 2.dp)
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(color)
+            )
+        }
+    }
+}
+
+@Composable
+fun PedalBars(data: TelemetryData) {
+    val theme = LocalDashboardTheme.current
+    
+    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+        // Brake
+        PedalBar(
+            label = "BRK",
+            value = data.brake / 255f,
+            color = Color(0xFFEF4444)
+        )
+        // Throttle
+        PedalBar(
+            label = "THR",
+            value = data.throttle / 255f,
+            color = Color(0xFF22C55E) // Green
+        )
+        // Steering
+        PedalBar(
+            label = "STR",
+            value = (data.steering + 127) / 254f, // -127 to 127
+            color = theme.primary,
+            isCenterBiased = true
+        )
+    }
+}
+
+@Composable
+fun PedalBar(label: String, value: Float, color: Color, isCenterBiased: Boolean = false) {
+    val theme = LocalDashboardTheme.current
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .width(24.dp)
+                .height(100.dp)
+                .background(theme.textPrimary.copy(alpha = 0.05f), RoundedCornerShape(8.dp))
+                .clip(RoundedCornerShape(8.dp)),
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            if (isCenterBiased) {
+                // Draw line from center
+                val heightPercent = Math.abs(value - 0.5f) * 2f
+                val alignTop = value > 0.5f
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(heightPercent)
+                        .align(if (alignTop) Alignment.TopCenter else Alignment.BottomCenter)
+                        .background(color)
+                )
+                // Center marker
+                Box(modifier = Modifier.fillMaxWidth().height(2.dp).background(theme.textPrimary.copy(alpha=0.5f)).align(Alignment.Center))
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .fillMaxHeight(value.coerceIn(0f, 1f))
+                        .background(color)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(8.dp))
+        Text(
+            text = label,
+            fontSize = 10.sp,
+            fontWeight = FontWeight.Bold,
+            color = theme.textSecondary
+        )
+    }
+}
+
+@Composable
 fun SettingsDialog(
     currentTheme: DashboardTheme,
     currentLayout: DashboardLayout,
@@ -1058,40 +1172,45 @@ fun SettingsDialog(
             )
         },
         text = {
-            Column(
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-                modifier = Modifier.verticalScroll(rememberScrollState())
+            androidx.compose.foundation.lazy.LazyColumn(
+                verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 
-                // Speed Unit Setting
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text("Speed Unit", fontWeight = FontWeight.Medium, color = theme.textPrimary)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text("KM/H", color = theme.textSecondary, fontSize = 12.sp)
-                        Switch(
-                            checked = isMph,
-                            onCheckedChange = onMphToggle,
-                            modifier = Modifier.padding(horizontal = 8.dp),
-                            colors = SwitchDefaults.colors(
-                                checkedThumbColor = theme.background,
-                                checkedTrackColor = theme.primary,
-                                uncheckedThumbColor = theme.secondary,
-                                uncheckedTrackColor = theme.surface
+                item {
+                    // Speed Unit Setting
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text("Speed Unit", fontWeight = FontWeight.Medium, color = theme.textPrimary)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text("KM/H", color = theme.textSecondary, fontSize = 12.sp)
+                            Switch(
+                                checked = isMph,
+                                onCheckedChange = onMphToggle,
+                                modifier = Modifier.padding(horizontal = 8.dp),
+                                colors = SwitchDefaults.colors(
+                                    checkedThumbColor = theme.background,
+                                    checkedTrackColor = theme.primary,
+                                    uncheckedThumbColor = theme.secondary,
+                                    uncheckedTrackColor = theme.surface
+                                )
                             )
-                        )
-                        Text("MPH", color = theme.textSecondary, fontSize = 12.sp)
+                            Text("MPH", color = theme.textSecondary, fontSize = 12.sp)
+                        }
                     }
                 }
                 
-                HorizontalDivider(color = theme.textPrimary.copy(alpha = 0.1f))
+                item { HorizontalDivider(color = theme.textPrimary.copy(alpha = 0.1f)) }
                 
-                // Layout Selection
-                Text("Select Layout", fontWeight = FontWeight.Medium, color = theme.textPrimary)
-                DashboardLayout.values().forEach { l ->
+                item {
+                    // Layout Selection
+                    Text("Select Layout", fontWeight = FontWeight.Medium, color = theme.textPrimary)
+                }
+                
+                items(DashboardLayout.values().size) { index ->
+                    val l = DashboardLayout.values()[index]
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -1113,11 +1232,15 @@ fun SettingsDialog(
                     }
                 }
                 
-                HorizontalDivider(color = theme.textPrimary.copy(alpha = 0.1f))
+                item { HorizontalDivider(color = theme.textPrimary.copy(alpha = 0.1f)) }
                 
-                // Theme Selection
-                Text("Select Theme", fontWeight = FontWeight.Medium, color = theme.textPrimary)
-                DashboardTheme.values().forEach { t ->
+                item {
+                    // Theme Selection
+                    Text("Select Theme", fontWeight = FontWeight.Medium, color = theme.textPrimary)
+                }
+                
+                items(DashboardTheme.values().size) { index ->
+                    val t = DashboardTheme.values()[index]
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier

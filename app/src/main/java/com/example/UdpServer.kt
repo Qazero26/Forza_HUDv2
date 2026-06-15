@@ -87,9 +87,18 @@ class UdpServer {
 
         // Gear is at offset 319 in the standard FH4/FH5 Dash struct
         var gear = 0
+        var throttle = 0
+        var brake = 0
+        var steering = 0
         if (length >= 320) {
             val gearValue = bb.get(319).toInt() and 0xFF
             gear = gearValue
+            val throttleValue = bb.get(315).toInt() and 0xFF
+            throttle = throttleValue
+            val brakeValue = bb.get(316).toInt() and 0xFF
+            brake = brakeValue
+            val steeringValue = bb.get(318).toInt()
+            steering = steeringValue
         }
 
         return TelemetryData(
@@ -99,7 +108,10 @@ class UdpServer {
             engineIdleRpm = idleRpm,
             currentEngineRpm = currentRpm,
             speedKmh = speedKmh,
-            gear = gear
+            gear = gear,
+            throttle = throttle,
+            brake = brake,
+            steering = steering
         )
     }
 }
