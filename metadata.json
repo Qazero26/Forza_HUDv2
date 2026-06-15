@@ -1,0 +1,6 @@
+{
+  "name": "Forza HUD",
+  "description": "A clean, beautiful digital HUD and telemetry viewer for Forza Horizon 5.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
