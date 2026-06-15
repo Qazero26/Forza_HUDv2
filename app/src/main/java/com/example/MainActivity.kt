@@ -11,13 +11,15 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowForward
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material3.*
@@ -78,14 +80,7 @@ fun ForzaDashboardApp(viewModel: ForzaViewModel = viewModel()) {
     val currentLayout by viewModel.currentLayout.collectAsState()
 
     var portInput by remember { mutableStateOf("5300") }
-    var ipInput by remember { mutableStateOf("") }
     var showSettings by remember { mutableStateOf(false) }
-
-    LaunchedEffect(localIp) {
-        if (ipInput.isEmpty() && localIp.isNotEmpty()) {
-            ipInput = localIp
-        }
-    }
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
@@ -186,8 +181,7 @@ fun ForzaDashboardApp(viewModel: ForzaViewModel = viewModel()) {
                             .padding(24.dp)
                     ) {
                         ConnectionPanel(
-                            localIp = ipInput,
-                            onIpInputChange = { ipInput = it },
+                            localIp = localIp,
                             portInput = portInput,
                             onPortInputChange = { portInput = it },
                             isListening = isListening,
@@ -223,8 +217,7 @@ fun ForzaDashboardApp(viewModel: ForzaViewModel = viewModel()) {
                         .padding(bottom = 16.dp)
                 ) {
                     ConnectionPanel(
-                        localIp = ipInput,
-                        onIpInputChange = { ipInput = it },
+                        localIp = localIp,
                         portInput = portInput,
                         onPortInputChange = { portInput = it },
                         isListening = isListening,
@@ -252,7 +245,6 @@ fun ForzaDashboardApp(viewModel: ForzaViewModel = viewModel()) {
 @Composable
 fun ConnectionPanel(
     localIp: String,
-    onIpInputChange: (String) -> Unit,
     portInput: String,
     onPortInputChange: (String) -> Unit,
     isListening: Boolean,
@@ -290,7 +282,7 @@ fun ConnectionPanel(
             // IP Address Field
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    "CONSOLE IP ADDRESS",
+                    "LOCAL IP ADDRESS",
                     fontSize = 10.sp,
                     fontWeight = FontWeight.Bold,
                     color = theme.textSecondary,
@@ -305,18 +297,11 @@ fun ConnectionPanel(
                         .padding(horizontal = 16.dp),
                     contentAlignment = Alignment.CenterStart
                 ) {
-                    BasicTextField(
-                        value = localIp,
-                        onValueChange = onIpInputChange,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                        singleLine = true,
-                        enabled = !isListening,
-                        textStyle = LocalTextStyle.current.copy(
-                            color = theme.textPrimary,
-                            fontSize = 14.sp,
-                            fontWeight = FontWeight.Medium
-                        ),
-                        modifier = Modifier.fillMaxWidth()
+                    Text(
+                        text = localIp,
+                        color = theme.textPrimary,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Medium
                     )
                 }
             }
@@ -375,7 +360,7 @@ fun ConnectionPanel(
             )
             Spacer(modifier = Modifier.width(8.dp))
             Icon(
-                imageVector = if (isListening) Icons.Default.Close else Icons.Default.ArrowForward,
+                imageVector = if (isListening) Icons.Default.Close else Icons.AutoMirrored.Filled.ArrowForward,
                 contentDescription = null,
                 tint = Color.White,
                 modifier = Modifier.size(16.dp)
@@ -481,8 +466,8 @@ fun DashboardCluster(data: TelemetryData, isLandscape: Boolean, isMph: Boolean, 
 
 fun getGearDisplay(gear: Int): String {
     return when(gear) {
-        0 -> "N"
-        11 -> "R"
+        0 -> "R"
+        11 -> "N"
         else -> "G$gear"
     }
 }
@@ -1073,7 +1058,10 @@ fun SettingsDialog(
             )
         },
         text = {
-            Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+            Column(
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                modifier = Modifier.verticalScroll(rememberScrollState())
+            ) {
                 
                 // Speed Unit Setting
                 Row(
@@ -1099,7 +1087,7 @@ fun SettingsDialog(
                     }
                 }
                 
-                Divider(color = theme.textPrimary.copy(alpha = 0.1f))
+                HorizontalDivider(color = theme.textPrimary.copy(alpha = 0.1f))
                 
                 // Layout Selection
                 Text("Select Layout", fontWeight = FontWeight.Medium, color = theme.textPrimary)
@@ -1125,7 +1113,7 @@ fun SettingsDialog(
                     }
                 }
                 
-                Divider(color = theme.textPrimary.copy(alpha = 0.1f))
+                HorizontalDivider(color = theme.textPrimary.copy(alpha = 0.1f))
                 
                 // Theme Selection
                 Text("Select Theme", fontWeight = FontWeight.Medium, color = theme.textPrimary)
